@@ -10,13 +10,14 @@ reorder:
 
 eciglogistica:
   url: https://nueva.eciglogistica.com
-  username:
-  password:
+  username: ${ECIGLOGISTICA_USERNAME:}
+  password: ${ECIGLOGISTICA_PASSWORD:}
 
 vaperalia:
-  url: https://vaperalia.com
-  username:
-  password:
+  url: https://vaperalia.es
+  username: ${VAPERALIA_USERNAME:}
+  password: ${VAPERALIA_PASSWORD:}
+  session-file: vaperalia-session.json
 
 playwright:
   headless: true
