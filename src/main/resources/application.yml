@@ -5,6 +5,7 @@ spring:
     password: ${DB_PASSWORD:vapeit}
     driver-class-name: org.postgresql.Driver
   jpa:
+    show-sql: true
     hibernate:
       ddl-auto: update
     properties:
@@ -18,4 +19,6 @@ spring:
 
 logging:
   level:
-    org.hibernate.SQL: info
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace
+    org.hibernate.tool.schema: debug

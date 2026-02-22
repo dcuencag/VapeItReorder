@@ -1,6 +1,8 @@
 services:
   postgres:
     image: postgres:17
+    container_name: vapeit_reorder_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: vapeit_reorder
       POSTGRES_USER: vapeit
@@ -8,5 +10,9 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./data/postgres-vapeit:/var/lib/postgresql/data:Z
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vapeit -d vapeit_reorder"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
