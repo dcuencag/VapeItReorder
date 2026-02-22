@@ -1,6 +1,5 @@
 package org.ppoole.vapeitreorder.service;
 
-import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
@@ -64,13 +63,15 @@ public class BotEngine {
 
             log.info("Running bot for {} with {} items", distributorName, distributorItems.size());
             try (var playwright = Playwright.create()) {
-                try (Browser browser = playwright.chromium().launch(
+                try (var browser = playwright.chromium().launch(
                         new BrowserType.LaunchOptions().setHeadless(headless))) {
-                    Page page = browser.newPage();
-                    var result = bot.run(page, distributorItems);
-                    results.add(result);
-                    log.info("Cart result for {}: status={}, items={}", distributorName,
-                            result.getStatus(), result.getCarrito() != null ? result.getCarrito().size() : 0);
+                    try (var context = browser.newContext(bot.newContextOptions())) {
+                        Page page = context.newPage();
+                        var result = bot.run(page, distributorItems);
+                        results.add(result);
+                        log.info("Cart result for {}: status={}, items={}", distributorName,
+                                result.getStatus(), result.getCarrito() != null ? result.getCarrito().size() : 0);
+                    }
                 }
             } catch (Exception e) {
                 log.error("Browser session failed for {}: {}", distributorName, e.getMessage());
