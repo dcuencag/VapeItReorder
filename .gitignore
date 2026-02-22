@@ -4,3 +4,4 @@ target/
 *.jar
 src/main/resources/application-local.yml
 **/vaperalia-session.json
+data/
