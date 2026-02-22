@@ -45,14 +45,13 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>src</sourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>VaperaliaPlaytest</mainClass>
+                    <mainClass>org.ppoole.vapeitreorder.playtest.app.PlaytestApp</mainClass>
                 </configuration>
             </plugin>
         </plugins>
