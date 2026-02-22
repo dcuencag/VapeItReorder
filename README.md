@@ -1,64 +1,43 @@
 # VapeItReorder
 
-Microservicio Spring Boot que automatiza el reabastecimiento de inventario con los distribuidores.
+App Spring Boot que compara precios de productos de vapeo entre distribuidores. Consulta el inventario de VapeIt, busca las URLs de cada distribuidor en su base de datos local (PostgreSQL) y con Playwright hace scraping del precio en cada web.
 
----
-
-## playtest/
-
-Proyecto Maven standalone (sin Spring) para inspeccionar el DOM de webs de distribuidores con Playwright. Úsalo para descubrir selectores antes de implementarlos en los bots.
-
-### Requisitos
+## Requisitos
 
 - Java 21
+- Docker (para PostgreSQL)
 - Chromium de Playwright instalado:
 
 ```bash
-cd playtest
 mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
 ```
 
-### Uso
+## Setup
 
-Desde el directorio `playtest/`:
-
-**1. Guardar sesión (primera vez o cuando expire)**
+**1. Levantar PostgreSQL**
 
 ```bash
-mvn compile exec:java -Dexec.args="--login"
+docker compose up -d
 ```
 
-Abre un navegador visible. Inicia sesión manualmente y espera — la sesión se guarda automáticamente en `vaperalia-session.json`.
+PostgreSQL queda en `localhost:5433`, base de datos `vapeit_reorder`. Las tablas se crean automáticamente (Hibernate ddl-auto: update).
 
-**2. Scraping con sesión guardada**
+**2. Guardar sesión de Vaperalia (primera vez o cuando expire)**
 
 ```bash
-mvn compile exec:java
+mvn spring-boot:run -Dspring-boot.run.arguments="--login"
 ```
 
-Navega a las URLs de producto definidas en `PRODUCT_URLS` y extrae nombre y precio.
+Abre un navegador visible. Inicia sesión manualmente en Vaperalia y espera — la sesión se guarda automáticamente en `vaperalia-session.json`.
 
-### Qué extrae
+**3. Ejecutar**
 
-Para cada URL de producto de Vaperalia:
-
-| Campo | Fuente |
-|---|---|
-| Nombre | `h1[itemprop='name']` |
-| Precio (con impuesto especial) | `window.productPrice` — JS global, no está en el DOM |
-
-### Añadir productos a inspeccionar
-
-Edita la lista `PRODUCT_URLS` en `src/main/java/VaperaliaPlaytest.java`:
-
-```java
-private static final List<String> PRODUCT_URLS = List.of(
-    "https://vaperalia.es/tu-producto-aqui.html"
-);
+```bash
+mvn spring-boot:run
 ```
 
-### Notas
+## Notas
 
-- `vaperalia-session.json` contiene cookies reales — está en `.gitignore` y no se commitea
-- Si el scraping redirige a la página de login, ejecuta `--login` de nuevo para renovar la sesión
-- El precio solo aparece como JS global (`window.productPrice`), no en el HTML — hay que usar `page.evaluate()`
+- `vaperalia-session.json` contiene cookies reales — está en `.gitignore`
+- Si el scraping redirige a la página de login, ejecuta el paso 2 de nuevo
+- VapeIt (proyecto hermano) debe estar corriendo en `localhost:8080`

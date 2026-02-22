@@ -1,63 +1,83 @@
 # VapeItReorder - Memory Bank
 
 ## Project Overview
-Spring Boot microservice que automatiza el rellenado del carrito en webs de distribuidores cuando el stock baja del mínimo. Corre en el **puerto 8081**. El backend VapeIt corre en el 8080.
+Spring Boot app para comparación de precios entre distribuidores de productos de vapeo. Consulta qué productos están bajo mínimos en VapeIt (sibling project en localhost:8080), busca las URLs de cada distribuidor en su base de datos local (PostgreSQL), y con Playwright hace scraping del precio en cada web.
 
 ## Current State
-- `src/` fue borrado — el código Spring Boot ya no existe en el árbol de trabajo
-- El código anterior está guardado en `old/src/` como referencia
-- `playtest/` es un proyecto Maven standalone (sin Spring) para inspeccionar DOM de distribuidores
-- El siguiente paso es reconstruir `src/` usando `old/src/` como base y los selectores descubiertos
+- `src/` es una app Spring Boot con JPA + PostgreSQL + Playwright
+- Paquete: `org.ppoole.vapeitreorder.playtest.app`
+- **Flujo funcional**: Pedro (API) → filtrar SKUs bajo mínimos → buscar URLs en BD → Playwright scrape → mostrar precios
+- La app arranca, ejecuta el flujo y se cierra (`context.close()` en main)
+- Puerto: **8081** (Tomcat, para futuros endpoints)
+- **Sin scheduler, sin endpoints REST** — el flujo se ejecuta al arrancar via ApplicationRunner
 
-## Playtest Project (`playtest/`)
-Proyecto Java standalone (no Spring Boot) con Playwright para inspeccionar webs de distribuidores.
+## Project Structure
+```
+src/main/java/org/ppoole/vapeitreorder/playtest/app/
+├── PlaytestApp.java                         # Entry point, ApplicationRunner que orquesta el flujo
+├── config/
+│   └── RestTemplateConfig.java              # Bean RestTemplate
+├── domain/
+│   ├── Distribuidora.java                   # Entity: id, name (unique)
+│   ├── Producto.java                        # Entity: sku (PK), nombre
+│   └── ProductoDistribuidora.java           # Entity: id, producto (FK), distribuidora (FK), url
+├── dto/
+│   └── ItemDto.java                         # DTO API Pedro: sku, unidadesActuales, minimoUnidades, maximoUnidades, needsReorder()
+├── repository/
+│   ├── DistribuidoraRepository.java         # findByName()
+│   ├── ProductoRepository.java              # standard CRUD
+│   └── ProductoDistribuidoraRepository.java # findByProductoSku(), findSkuUrlPairsBySkuIn()
+├── service/
+│   └── ItemApiClient.java                   # GET /api/items → filtra needsReorder() → devuelve SKUs
+└── vaperalia/
+    └── VaperaliaPlaytestService.java        # --login / scrape modes con Playwright
+```
 
-### VaperaliaPlaytest.java
-- `--login` mode: abre Chromium visible, espera login manual, guarda sesión en `vaperalia-session.json`
-- Default mode: scraping headless usando sesión guardada
-- Archivos: `VaperaliaPlaytest.java`, `pom.xml`, `debug-output.html` (HTML capturado)
-- **`vaperalia-session.json` está en `.gitignore`** — contiene cookies reales
+## Flujo Actual (ApplicationRunner en PlaytestApp)
+1. `ItemApiClient.fetchSkusNeedingReorder()` → llama a Pedro `GET /api/items`, filtra `unidadesActuales < minimoUnidades`, devuelve SKUs
+2. `ProductoDistribuidoraRepository.findSkuUrlPairsBySkuIn(skus)` → busca URLs en BD local
+3. `VaperaliaPlaytestService.scrape(urls)` → valida sesión, navega a cada URL, extrae nombre y precio
 
-### Vaperalia DOM (descubierto)
-Vaperalia es una tienda **PrestaShop** (v6.6.7). Selectores y variables JS confirmados:
-- Nombre del producto: `h1[itemprop='name']` → `.textContent().trim()`
-- Precio (con impuesto especial): `window.productPrice` — JS global, **no está en el DOM**
-- Precio sin impuestos: `window.productBasePriceTaxExcl`
-- Disponible para comprar: `window.productAvailableForOrder` (boolean)
-- Stock disponible: `window.quantityAvailable`
-- Descuento de grupo aplicado: `window.group_reduction` (ej: `-0.15` = 15% descuento cuando logueado)
-- `window.productShowPrice = false` cuando no está logueado (precio en JS igual existe)
-- Login URL: `https://vaperalia.es/autenticacion?back=my-account`
-- Tras login, redirige a `**/mi-cuenta**`
-- Sesión Playwright: `context.storageState(path)` para guardar, `Browser.NewContextOptions().setStorageStatePath()` para cargar
+## API de Pedro (VapeIt)
+- Endpoint: `GET http://localhost:8080/api/items`
+- Campos relevantes: `sku`, `unidadesActuales`, `minimoUnidades`, `maximoUnidades`
+- Config: `vapeit.api-url` en application.yml (default `http://localhost:8080`)
 
-## Old Code Reference (`old/`)
-Contiene el código Spring Boot anterior completo:
-- `old/src/` — todo el código Java
-- `old/plan.md`, `old/playwright.md`, `old/plan-compare.md` — documentación anterior
-
-## Arquitectura Anterior (referencia para reconstruir)
-1. Cron fires at 14:30 and 21:30 → `ReorderScheduler` calls VapeIt API (`GET /api/items`)
-2. Filters items where `currentStock < minimoUnidades`
-3. `BotEngine` groups items by `distribuidor`, opens one Chromium browser per distributor
-4. Each `DistributorBot` logs in, adds items to cart, scrapes cart → returns `CartResultDto`
-5. `OrderReporter` POSTs each `CartResultDto` to `vapeit.report-url`
-6. `POST /trigger` on port 8081 fires a manual run
-7. `POST /compare` y `POST /order` para comparación de precios
+## Database
+- **PostgreSQL 17** via Docker Compose en puerto **5433** (host) → 5432 (container)
+- DB: `vapeit_reorder`, user: `vapeit`, password: `vapeit`
+- Volumen: `./data/postgres-vapeit` (en .gitignore, carpeta `data/` sin punto)
+- Hibernate ddl-auto: `update` (crea tablas automáticamente)
+- Tablas: `DISTRIBUIDORA`, `PRODUCTO`, `PRODUCTO_DISTRIBUIDORA`
+- Datos de ejemplo insertados: distribuidora "vaperalia" + 3 productos con URLs
 
 ## Tech Stack
-- Java 21, Spring Boot 3.5.0 + spring-boot-starter-web (embedded Tomcat, port 8081)
-- Playwright Java 1.49.0 — Chromium installed at `/Users/daniel/Library/Caches/ms-playwright/chromium-1148`
-- RestTemplate for HTTP calls to VapeIt at localhost:8080
-- Maven build, no database
+- Java 21, Spring Boot 3.5.0 (starter-web + starter-data-jpa)
+- Playwright Java 1.49.0
+- PostgreSQL driver (runtime)
+- Jackson (databind + jsr310)
+- Maven build
 
-## Key DTOs (referencia)
-- `ItemDto` — id, sku, nombre, minimoUnidades, maximoUnidades, currentStock, supplierUrl, distribuidor, urlProducto, cantidadAPedir; método `needsReorder()`
-- `CartItemDto` — sku, nombre, cantidad, precioUnitario (línea de carrito scrapeada)
-- `CartResultDto` — distribuidor, timestamp, status, carrito, errores
-- `PriceOptionDto` — distribuidor, nombre, precio, urlProducto, disponible
-- `PriceComparisonDto` — sku, nombre, cantidadAPedir, List<PriceOptionDto> opciones
-- `OrderSelectionDto` — sku, distribuidor, cantidadAPedir
+## Vaperalia Scraping
+- Sesión Playwright guardada en `vaperalia-session.json` (raíz del proyecto, en .gitignore)
+- **Validación de sesión**: antes de scrapear, navega a `/mi-cuenta` y comprueba que no redirige a `autenticacion`
+- Si no hay fichero de sesión o la sesión ha caducado → error claro y para
+- Selectores: nombre `h1[itemprop='name']`, precio `window.productPrice` (JS global)
+- Variables JS adicionales: `productBasePriceTaxExcl`, `group_reduction` (-0.15 = 15% dto logueado), `quantityAvailable`, `productShowPrice`
+
+## Plan Pendiente
+1. ~~Docker + PostgreSQL~~ HECHO
+2. ~~Entidades JPA + repositorios~~ HECHO
+3. ~~ItemApiClient (Pedro → SKUs)~~ HECHO
+4. ~~Flujo completo Pedro → BD → Playwright~~ HECHO
+5. Integrar `EciglogisticaBot` con `searchProduct()`
+6. `PriceComparator` orquestador multi-distribuidor
+7. Endpoints REST
+8. Scheduler (cron)
+
+## Código Legacy
+- `old/` contiene el código Spring Boot anterior (multi-distributor bots, cart scraping, order reporting)
+- `playtest/` contiene el playtest original standalone (sin Spring), ahora migrado a `src/`
 
 ## Coding Conventions
 - No Lombok, no records — plain POJOs with explicit getters/setters
@@ -70,13 +90,14 @@ Contiene el código Spring Boot anterior completo:
 
 ## Running
 ```bash
-# Playtest (desde playtest/)
-mvn compile exec:java -Dexec.mainClass=VaperaliaPlaytest -Dexec.args="--login"  # guardar sesión
-mvn compile exec:java -Dexec.mainClass=VaperaliaPlaytest                         # scraping
+# Levantar PostgreSQL
+docker compose up -d
 
-# Main app (cuando se reconstruya src/)
+# Guardar sesión de Vaperalia (primera vez o cuando caduque)
+mvn spring-boot:run -Dspring-boot.run.arguments="--login"
+
+# Ejecutar flujo completo
 mvn spring-boot:run
-curl -X POST http://localhost:8081/trigger
 ```
 
 ## Sibling Project
