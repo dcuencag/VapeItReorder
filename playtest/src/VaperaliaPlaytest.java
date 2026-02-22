@@ -90,6 +90,9 @@ public class VaperaliaPlaytest {
             String nombre = page.locator("h1[itemprop='name']").textContent().trim();
             Object precio = page.evaluate("() => window.productPrice ?? null");
 
+
+            // Hay que contemplar como aplicamos los impuestos especiales, que no se muestran en el precio final
+            // pero sí afectan al precio base
             System.out.println("Nombre:  " + nombre);
             System.out.println("Precio solo con impuesto especial:  " + precio + " €");
         } catch (Exception e) {
