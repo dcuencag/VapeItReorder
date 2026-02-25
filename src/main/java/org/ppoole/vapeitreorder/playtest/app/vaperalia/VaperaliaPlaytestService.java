@@ -6,12 +6,15 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.WaitUntilState;
+import org.ppoole.vapeitreorder.playtest.app.domain.ProductoRespuesta;
+import org.ppoole.vapeitreorder.playtest.app.repository.ProductoDistribuidoraRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -37,12 +40,15 @@ public class VaperaliaPlaytestService {
         }
     }
 
-    public void scrape(List<String> urls) {
+    public List<ProductoRespuesta> scrape(List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> urls) {
+
+        List<ProductoRespuesta> productoRespuestas = new ArrayList<>();
         if (urls.isEmpty()) {
             log.info("No URLs to scrape");
-            return;
+            return productoRespuestas;
         }
 
+        List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> failedTrios = new java.util.ArrayList<>();
         var sessionPath = Path.of(SESSION_FILE);
 
         try (Playwright playwright = Playwright.create();
@@ -52,7 +58,7 @@ public class VaperaliaPlaytestService {
             var contextOptions = new Browser.NewContextOptions();
             if (!Files.exists(sessionPath)) {
                 log.error("\n\n!!!! ERROR: No se encontró el fichero de sesión. Ejecuta 'mvn spring-boot:run -Dspring-boot.run.arguments=\"--login\"\n' para guardar la sesión primero !!!!\n");
-                return;
+                return productoRespuestas;
             }
             log.info("Cargando sesión desde {}", sessionPath.toAbsolutePath());
             contextOptions.setStorageStatePath(sessionPath);
@@ -61,13 +67,33 @@ public class VaperaliaPlaytestService {
                 Page page = context.newPage();
                 if (!validateSession(page)) {
                     log.error("\n\n!!!! ERROR: La sesión de Vaperalia no es válida o ha caducado. Ejecuta 'mvn spring-boot:run -Dspring-boot.run.arguments=\"--login\"\n' para renovarla !!!!\n");
-                    return;
+                    return productoRespuestas;
                 }
-                for (String url : urls) {
-                    scrapeProduct(page, url);
+                for (ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio url : urls) {
+                    try {
+                        ProductoRespuesta productoRespuesta = scrapeProduct(page, url);
+                        if (productoRespuesta == null) {
+                            failedTrios.add(url);
+                            log.error("No se pudo obtener precio para SKU {} ({})", url.getSku(), url.getUrl());
+                        } else {
+                            productoRespuestas.add(productoRespuesta);
+                        }
+                    } catch (Exception e) {
+                        failedTrios.add(url);
+                        log.error("Error procesando SKU {} ({}): {}", url.getSku(), url.getUrl(), e.getMessage());
+                    }
+                }
+
+                if (!failedTrios.isEmpty()) {
+                    log.error("Fallaron {} productos", failedTrios.size());
+                    for (ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio failedTrio : failedTrios) {
+                        log.error("FAILED -> SKU {} | {}", failedTrio.getSku(), failedTrio.getUrl());
+                    }
                 }
             }
         }
+
+        return productoRespuestas;
     }
 
     private boolean validateSession(Page page) {
@@ -80,24 +106,34 @@ public class VaperaliaPlaytestService {
         return true;
     }
 
-    private void scrapeProduct(Page page, String url) {
-        log.info("Scraping {}", url);
+    private ProductoRespuesta scrapeProduct(Page page, ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio skuUrl) {
+        String url = skuUrl.getUrl();
+        log.info("Scraping {} ({})", skuUrl.getSku(), url);
 
         page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForLoadState();
 
         if (page.url().contains("autenticacion")) {
             log.error("Redirigido a login — la sesión no es válida o no se cargó");
-            return;
+            return null;
         }
 
         try {
             String nombre = page.locator("h1[itemprop='name']").textContent().trim();
             Object precio = page.evaluate("() => window.productPrice ?? null");
 
-            log.info("\n────────────────────────────────────────────\n  Producto:  {}\n  Precio:    {} €\n────────────────────────────────────────────", nombre, precio);
+            Double precioValue = null;
+            if (precio instanceof Number number) {
+                precioValue = number.doubleValue();
+            } else if (precio instanceof String text && !text.isBlank()) {
+                precioValue = Double.parseDouble(text.replace(",", "."));
+            }
+
+            log.info("\n────────────────────────────────────────────\n  Producto:  {}\n  Precio:    {} €\n────────────────────────────────────────────", nombre, precioValue);
+            return new ProductoRespuesta(skuUrl.getSku(), nombre, precioValue, skuUrl.getUrl(), skuUrl.getDistribuidoraName());
         } catch (Exception e) {
             log.error("Error scraping {}: {}", url, e.getMessage());
+            return null;
         }
     }
 }

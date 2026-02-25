@@ -1,5 +1,6 @@
 package org.ppoole.vapeitreorder.playtest.app;
 
+import org.ppoole.vapeitreorder.playtest.app.domain.ProductoRespuesta;
 import org.ppoole.vapeitreorder.playtest.app.repository.ProductoDistribuidoraRepository;
 import org.ppoole.vapeitreorder.playtest.app.service.ItemApiClient;
 import org.ppoole.vapeitreorder.playtest.app.vaperalia.VaperaliaPlaytestService;
@@ -12,6 +13,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
+
+import java.util.List;
 
 @SpringBootApplication
 @EntityScan("org.ppoole.vapeitreorder.playtest.app.domain")
@@ -41,13 +44,22 @@ public class PlaytestApp {
                     log.info("No SKUs need reorder");
                     return;
                 }
+                List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> urls = productoDistribuidoraRepository.findSkuUrlDistribuidoraTriosBySkuIn(skus);
 
-                var urls = productoDistribuidoraRepository.findSkuUrlPairsBySkuIn(skus).stream()
-                        .map(ProductoDistribuidoraRepository.SkuUrlPair::getUrl)
+
+
+
+                //Para todos los trio que sean de vaperalia:
+                log.info("Found {} URLs for {} SKUs needing reorder", urls.size(), skus.size());
+                List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> vaperaliaTrios = urls.stream()
+                        .filter(trio -> "VAPERALIA".equalsIgnoreCase(trio.getDistribuidoraName()))
                         .toList();
 
-                log.info("Found {} URLs for {} SKUs needing reorder", urls.size(), skus.size());
-                vaperaliaPlaytestService.scrape(urls);
+                List<ProductoRespuesta> productoRespuestas = vaperaliaPlaytestService.scrape(vaperaliaTrios);
+
+
+                //Para todos los pair(trio) que sean de eciglogistica
+                //List...
             }
         };
     }

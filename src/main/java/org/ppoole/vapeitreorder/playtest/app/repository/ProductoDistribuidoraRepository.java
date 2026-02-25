@@ -10,10 +10,12 @@ import java.util.List;
 
 public interface ProductoDistribuidoraRepository extends JpaRepository<ProductoDistribuidora, Long> {
 
-    interface SkuUrlPair {
+    interface SkuUrlDistribuidoraTrio {
         String getSku();
 
         String getUrl();
+
+        String getDistribuidoraName();
     }
 
     List<ProductoDistribuidora> findByProductoSku(String sku);
@@ -21,9 +23,9 @@ public interface ProductoDistribuidoraRepository extends JpaRepository<ProductoD
     List<ProductoDistribuidora> findByDistribuidoraId(Long distribuidoraId);
 
     @Query("""
-            select pd.producto.sku as sku, pd.url as url
+            select pd.producto.sku as sku, pd.url as url, pd.distribuidora.name as distribuidoraName
             from ProductoDistribuidora pd
             where pd.producto.sku in :skus
             """)
-    List<SkuUrlPair> findSkuUrlPairsBySkuIn(@Param("skus") Collection<String> skus);
+    List<SkuUrlDistribuidoraTrio> findSkuUrlDistribuidoraTriosBySkuIn(@Param("skus") Collection<String> skus);
 }
