@@ -29,8 +29,8 @@ public class VaperaliaPlaytestService {
             try (BrowserContext context = browser.newContext()) {
                 Page page = context.newPage();
                 page.navigate("https://vaperalia.es/autenticacion?back=my-account");
-                log.info("Esperando hasta 3 minutos para que inicies sesión...");
-                page.waitForURL("**/mi-cuenta**", new Page.WaitForURLOptions().setTimeout(180_000));
+                log.info("Esperando hasta 5 minutos para que inicies sesión...");
+                page.waitForURL("**/mi-cuenta**", new Page.WaitForURLOptions().setTimeout(300_000));
                 context.storageState(new BrowserContext.StorageStateOptions().setPath(Path.of(SESSION_FILE)));
                 log.info("Sesión guardada en {}", Path.of(SESSION_FILE).toAbsolutePath());
             }
@@ -101,3 +101,5 @@ public class VaperaliaPlaytestService {
         }
     }
 }
+
+// convertirlo a un objeto
