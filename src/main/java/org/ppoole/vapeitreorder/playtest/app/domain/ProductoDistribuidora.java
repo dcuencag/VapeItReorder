@@ -15,8 +15,8 @@ import jakarta.persistence.UniqueConstraint;
 @Table(
         name = "PRODUCTO_DISTRIBUIDORA",
         uniqueConstraints = @UniqueConstraint(
-                name = "UK_PRODUCTO_DISTRIBUIDORA_SKU_DIST",
-                columnNames = {"SKU", "ID_DISTRIBUIDORA"}
+                name = "UK_PRODUCTO_DISTRIBUIDORA_SKU_DIST_VAR",
+                columnNames = {"SKU", "ID_DISTRIBUIDORA", "VARIANTE"}
         )
 )
 public class ProductoDistribuidora {
@@ -37,6 +37,9 @@ public class ProductoDistribuidora {
     @Column(name = "URL", nullable = false, length = 2048)
     private String url;
 
+    @Column(name = "VARIANTE")
+    private String variante;
+
     protected ProductoDistribuidora() {
     }
 
@@ -44,6 +47,13 @@ public class ProductoDistribuidora {
         this.producto = producto;
         this.distribuidora = distribuidora;
         this.url = url;
+    }
+
+    public ProductoDistribuidora(Producto producto, Distribuidora distribuidora, String url, String variante) {
+        this.producto = producto;
+        this.distribuidora = distribuidora;
+        this.url = url;
+        this.variante = variante;
     }
 
     public Long getId() {
@@ -64,5 +74,13 @@ public class ProductoDistribuidora {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public String getVariante() {
+        return variante;
+    }
+
+    public void setVariante(String variante) {
+        this.variante = variante;
     }
 }

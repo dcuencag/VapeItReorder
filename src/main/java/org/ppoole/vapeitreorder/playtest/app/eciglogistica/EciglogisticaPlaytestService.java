@@ -108,7 +108,9 @@ public class EciglogisticaPlaytestService {
 
     private ProductoRespuesta scrapeProduct(Page page, ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio skuUrl) {
         String url = skuUrl.getUrl();
-        log.info("Scraping {} ({})", skuUrl.getSku(), url);
+        String variante = skuUrl.getVariante();
+        log.info("Scraping {} ({}){}",
+                skuUrl.getSku(), url, variante != null ? " variante=" + variante : "");
 
         page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
         page.waitForLoadState();
@@ -119,15 +121,27 @@ public class EciglogisticaPlaytestService {
         }
 
         try {
+            if (variante != null) {
+                selectVariante(page, variante);
+            }
+
             String nombre = page.locator("h1").first().textContent().trim();
             String precioText = page.locator("h6.product-price").textContent().trim().replace("€", "").trim();
             Double precioValue = Double.parseDouble(precioText);
 
-            log.info("\n────────────────────────────────────────────\n  Producto:  {}\n  Precio:    {} €\n────────────────────────────────────────────", nombre, precioValue);
-            return new ProductoRespuesta(skuUrl.getSku(), nombre, precioValue, skuUrl.getUrl(), skuUrl.getDistribuidoraName());
+            String displayName = variante != null ? nombre + " (" + variante + ")" : nombre;
+            log.info("\n────────────────────────────────────────────\n  Producto:  {}\n  Precio:    {} €\n────────────────────────────────────────────", displayName, precioValue);
+            return new ProductoRespuesta(skuUrl.getSku(), displayName, precioValue, skuUrl.getUrl(), skuUrl.getDistribuidoraName());
         } catch (Exception e) {
             log.error("Error scraping {}: {}", url, e.getMessage());
             return null;
         }
+    }
+
+    private void selectVariante(Page page, String variante) {
+        var select = page.locator("select.select-attribute-product");
+        select.selectOption(new com.microsoft.playwright.options.SelectOption().setLabel(variante));
+        log.info("Variante seleccionada: {}", variante);
+        page.waitForTimeout(1500);
     }
 }

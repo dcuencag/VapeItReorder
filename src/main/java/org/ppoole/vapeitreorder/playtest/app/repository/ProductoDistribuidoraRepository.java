@@ -16,6 +16,8 @@ public interface ProductoDistribuidoraRepository extends JpaRepository<ProductoD
         String getUrl();
 
         String getDistribuidoraName();
+
+        String getVariante();
     }
 
     List<ProductoDistribuidora> findByProductoSku(String sku);
@@ -23,7 +25,7 @@ public interface ProductoDistribuidoraRepository extends JpaRepository<ProductoD
     List<ProductoDistribuidora> findByDistribuidoraId(Long distribuidoraId);
 
     @Query("""
-            select pd.producto.sku as sku, pd.url as url, pd.distribuidora.name as distribuidoraName
+            select pd.producto.sku as sku, pd.url as url, pd.distribuidora.name as distribuidoraName, pd.variante as variante
             from ProductoDistribuidora pd
             where pd.producto.sku in :skus
             """)
