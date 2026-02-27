@@ -62,6 +62,9 @@ public class PlaytestApp {
                         .filter(trio -> "ECIGLOGISTICA".equalsIgnoreCase(trio.getDistribuidoraName()))
                         .toList();
                 List<ProductoRespuesta> ecigResults = eciglogisticaPlaytestService.scrape(eciglogisticaTrios);
+
+
+
             }
         };
     }
