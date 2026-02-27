@@ -1,117 +1,102 @@
 # VapeItReorder - Memory Bank
 
 ## Project Overview
-Spring Boot app para comparación de precios entre distribuidores de productos de vapeo. Consulta qué productos están bajo mínimos en VapeIt (sibling project en localhost:8080), busca las URLs de cada distribuidor en su base de datos local (PostgreSQL), y con Playwright hace scraping del precio en cada web.
+Aplicación Spring Boot para consultar SKUs bajo mínimos en VapeIt (`GET /api/items`), resolver URLs de producto por distribuidora desde PostgreSQL y hacer scraping de precio con Playwright en Vaperalia y Eciglogistica.
 
 ## Current State
-- `src/` es una app Spring Boot con JPA + PostgreSQL + Playwright
-- Paquete: `org.ppoole.vapeitreorder.playtest.app`
-- **Flujo funcional**: VapeIt (API) → filtrar SKUs bajo mínimos → buscar URLs en BD → Playwright scrape → mostrar precios
-- La app arranca, ejecuta el flujo y se cierra (`context.close()` en main)
-- Puerto: **8081** (Tomcat, para futuros endpoints)
-- **Sin scheduler, sin endpoints REST** — el flujo se ejecuta al arrancar via ApplicationRunner
-- **Dos distribuidores funcionales**: Vaperalia y Eciglogistica
+- Stack activo en `src/`: Spring Boot + Spring Data JPA + PostgreSQL + Playwright
+- Paquete base: `org.ppoole.vapeitreorder.playtest.app`
+- Ejecución one-shot: arranca, corre el `ApplicationRunner`, y cierra contexto (`context.close()` en `main`)
+- Puerto configurado: `8081`
+- Sin endpoints REST ni scheduler
+- Modos CLI:
+  - `--login`: guarda sesión de Vaperalia
+  - `--login-ecig`: guarda sesión de Eciglogistica
+- Flujo principal implementado: API VapeIt -> filtro de SKUs -> query de URLs en BD -> scraping por distribuidora
+- Resultado actual del runner: scrapea y guarda en listas locales (`vaperaliaResults`, `ecigResults`) pero no persiste ni expone salida final
 
 ## Project Structure
 ```
 src/main/java/org/ppoole/vapeitreorder/playtest/app/
-├── PlaytestApp.java                         # Entry point, ApplicationRunner que orquesta el flujo
+├── PlaytestApp.java
 ├── config/
-│   └── RestTemplateConfig.java              # Bean RestTemplate
+│   └── RestTemplateConfig.java
 ├── domain/
-│   ├── Distribuidora.java                   # Entity: id, name (unique)
-│   ├── Producto.java                        # Entity: sku (PK), nombre
-│   ├── ProductoDistribuidora.java           # Entity: id, producto (FK), distribuidora (FK), url, variante (nullable)
-│   └── ProductoRespuesta.java               # POJO: sku, nombre, precio, url, distribuidora
+│   ├── Distribuidora.java
+│   ├── Producto.java
+│   ├── ProductoDistribuidora.java
+│   └── ProductoRespuesta.java
 ├── dto/
-│   └── ItemDto.java                         # DTO API VapeIt: sku, unidadesActuales, minimoUnidades, maximoUnidades, needsReorder()
+│   └── ItemDto.java
 ├── repository/
-│   ├── DistribuidoraRepository.java         # findByName()
-│   ├── ProductoRepository.java              # standard CRUD
-│   └── ProductoDistribuidoraRepository.java # findSkuUrlDistribuidoraTriosBySkuIn() — proyección (sku, url, distribuidoraName, variante)
+│   ├── DistribuidoraRepository.java
+│   ├── ProductoRepository.java
+│   └── ProductoDistribuidoraRepository.java
 ├── service/
-│   └── ItemApiClient.java                   # GET /api/items → filtra needsReorder() → devuelve SKUs
+│   └── ItemApiClient.java
 ├── vaperalia/
-│   └── VaperaliaPlaytestService.java        # --login / scrape modes con Playwright
+│   └── VaperaliaPlaytestService.java
 └── eciglogistica/
-    └── EciglogisticaPlaytestService.java    # --login-ecig / scrape modes con Playwright
+    └── EciglogisticaPlaytestService.java
 ```
 
-## Flujo Actual (ApplicationRunner en PlaytestApp)
-1. `ItemApiClient.fetchSkusNeedingReorder()` → llama a VapeIt `GET /api/items`, filtra `unidadesActuales < minimoUnidades`, devuelve SKUs
-2. `ProductoDistribuidoraRepository.findSkuUrlDistribuidoraTriosBySkuIn(skus)` → busca URLs en BD local (incluye variante)
-3. URLs se agrupan por distribuidora
-4. `VaperaliaPlaytestService.scrape(urls)` → valida sesión, navega a cada URL, extrae nombre y precio
-5. `EciglogisticaPlaytestService.scrape(urls)` → valida sesión, si hay variante selecciona en dropdown, extrae nombre y precio
+## Actual Runtime Flow (`PlaytestApp` runner)
+1. Si primer argumento es `--login`, ejecuta `VaperaliaPlaytestService.saveSession()` y termina.
+2. Si primer argumento es `--login-ecig`, ejecuta `EciglogisticaPlaytestService.saveSession()` y termina.
+3. `ItemApiClient.fetchSkusNeedingReorder()` llama `GET {vapeit.api-url}/api/items` y filtra `unidadesActuales < minimoUnidades`.
+4. Si no hay SKUs, loggea y termina.
+5. `ProductoDistribuidoraRepository.findSkuUrlDistribuidoraTriosBySkuIn(skus)` devuelve `sku`, `url`, `distribuidoraName`, `variante`.
+6. Filtra por distribuidora con `equalsIgnoreCase("VAPERALIA")` y `equalsIgnoreCase("ECIGLOGISTICA")`.
+7. Ejecuta scraping por servicio y acumula resultados en listas.
 
-## API de VapeIt
-- Endpoint: `GET http://localhost:8080/api/items`
-- Campos relevantes: `sku`, `unidadesActuales`, `minimoUnidades`, `maximoUnidades`
-- Config: `vapeit.api-url` en application.yml (default `http://localhost:8080`)
+## API VapeIt
+- Endpoint esperado: `GET http://localhost:8080/api/items` (por defecto)
+- Configurable con `vapeit.api-url` (env: `VAPEIT_API_URL`)
+- DTO usado: `ItemDto` (`sku`, `unidadesActuales`, `minimoUnidades`, `maximoUnidades`, `needsReorder()`)
 
 ## Database
-- **PostgreSQL 17** via Docker Compose en puerto **5433** (host) → 5432 (container)
-- DB: `vapeit_reorder`, user: `vapeit`, password: `vapeit`
-- Volumen: `./data/postgres-vapeit` (en .gitignore, carpeta `data/` sin punto)
-- Hibernate ddl-auto: `update` (crea tablas automáticamente)
-- Tablas: `DISTRIBUIDORA`, `PRODUCTO`, `PRODUCTO_DISTRIBUIDORA`
-- Distribuidoras: `vaperalia`, `ECIGLOGISTICA`
-- Unique constraint: `(SKU, ID_DISTRIBUIDORA, VARIANTE)` — permite mismo SKU+distribuidora con variantes distintas
+- PostgreSQL 17 en Docker (`docker-compose.yml`)
+- Puerto: `5433` host -> `5432` container
+- DB/user/pass: `vapeit_reorder` / `vapeit` / `vapeit`
+- Volumen: `./data/postgres-vapeit`
+- Hibernate: `ddl-auto: update`
+- Entidades/tablas: `DISTRIBUIDORA`, `PRODUCTO`, `PRODUCTO_DISTRIBUIDORA`
+- Constraint único en `PRODUCTO_DISTRIBUIDORA`: `(SKU, ID_DISTRIBUIDORA, VARIANTE)`
 
-## Variantes
-- Columna `variante` en `producto_distribuidora` — nullable, solo se usa cuando un producto en el distribuidor tiene variantes seleccionables (ej. 10mg, 20mg)
-- En Eciglogistica: algunos productos comparten URL con un `<select class="select-attribute-product">` para elegir variante. El scraper selecciona la opción por label y espera 1.5s para que AJAX actualice el precio
-- En Vaperalia: cada variante tiene URL distinta, no se usa el campo variante
-- **Decisión de diseño**: aunque sean variantes, en VapeIt se tratan como productos independientes con SKUs distintos (ej. `BLRSPBRRIVGSLTS10`, `BLRSPBRRIVGSLTS20`)
+## Scraping Details
+### Vaperalia
+- Fichero de sesión: `vaperalia-session.json` (ruta relativa al directorio de ejecución)
+- Validación de sesión: navegar a `https://vaperalia.es/mi-cuenta` y verificar que no redirige a `autenticacion`
+- Selectores: nombre `h1[itemprop='name']`, precio `#our_price_display`
+- Parseo precio: elimina `€`, convierte `,` a `.` y parsea a `Double`
 
-## Vaperalia Scraping
-- Sesión Playwright guardada en `vaperalia-session.json` (raíz del proyecto, en .gitignore)
-- **Validación de sesión**: antes de scrapear, navega a `/mi-cuenta` y comprueba que no redirige a `autenticacion`
-- Si no hay fichero de sesión o la sesión ha caducado → error claro y para
-- Selectores: nombre `h1[itemprop='name']`, precio `#our_price_display` (elemento DOM, se parsea quitando `€` y convirtiendo `,` a `.`)
-- **NO usar `window.productPrice`** — es una variable JS con race condition, a veces no está lista cuando Playwright la lee
+### Eciglogistica
+- Fichero de sesión: `eciglogistica-session.json` (ruta relativa al directorio de ejecución)
+- Validación de sesión: navegar a `https://nueva.eciglogistica.com/perfil/basico` y verificar que no redirige a `entrar`
+- Selectores: nombre `h1`, precio `h6.product-price`
+- Soporte variantes: si `variante != null`, selecciona label en `select.select-attribute-product` y espera 1500ms
+- Parseo precio: elimina `€` y parsea a `Double` directamente
 
-## Eciglogistica Scraping
-- Sesión Playwright guardada en `eciglogistica-session.json` (raíz del proyecto, en .gitignore)
-- **Validación de sesión**: navega a `/perfil/basico` y comprueba que no redirige a `entrar`
-- Login: `--login-ecig` abre navegador visible en `https://nueva.eciglogistica.com/entrar`
-- Selectores: nombre `h1`, precio `h6.product-price` (se parsea quitando `€`)
-- Soporte de variantes: si `variante != null`, selecciona en `select.select-attribute-product` por label y espera 1.5s
-
-## Plan Pendiente
-1. ~~Docker + PostgreSQL~~ HECHO
-2. ~~Entidades JPA + repositorios~~ HECHO
-3. ~~ItemApiClient (VapeIt → SKUs)~~ HECHO
-4. ~~Flujo completo VapeIt → BD → Playwright~~ HECHO
-5. ~~Eciglogistica scraper~~ HECHO
-6. ~~Soporte de variantes en Eciglogistica~~ HECHO
-7. `PriceComparator` orquestador multi-distribuidor
-8. Endpoints REST
-9. Scheduler (cron)
-
-## Coding Conventions
-- No Lombok, no records — plain POJOs with explicit getters/setters
-- Constructor injection only, @Value in constructor params
-- SLF4J logging with {} placeholders
-- Spanish domain names, English code
-- var for local type inference, Stream API for filtering
-- try-with-resources for Closeable, per-item error handling in loops
-- No javadoc/comments unless necessary
+## Notas Técnicas Relevantes
+- `ProductoRespuesta` existe como POJO de salida, pero sus accesores de distribuidora están nombrados como `getString()`/`setString()` en vez de `getDistribuidora()`/`setDistribuidora()`.
+- `ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio` es proyección por interfaz (no DTO clase).
+- Se usa `RestTemplate` por bean dedicado (`RestTemplateConfig`).
 
 ## Running
 ```bash
-# Levantar PostgreSQL
 docker compose up -d
 
-# Guardar sesión de Vaperalia (primera vez o cuando caduque)
+# Guardar sesión Vaperalia
 mvn spring-boot:run -Dspring-boot.run.arguments="--login"
 
-# Guardar sesión de Eciglogistica (primera vez o cuando caduque)
+# Guardar sesión Eciglogistica
 mvn spring-boot:run -Dspring-boot.run.arguments="--login-ecig"
 
-# Ejecutar flujo completo
+# Ejecutar flujo
 mvn spring-boot:run
 ```
 
-## Sibling Project
-VapeIt main app at `/Users/daniel/code/VapeIt` — provides REST API at localhost:8080.
+## Pending Work (según código actual)
+1. Orquestador de comparación final (tipo `PriceComparator`)
+2. Exponer resultados por endpoint REST
+3. Programación recurrente (scheduler/cron)

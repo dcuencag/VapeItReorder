@@ -1,5 +1,6 @@
 package org.ppoole.vapeitreorder.playtest.app;
 
+import org.ppoole.vapeitreorder.playtest.app.domain.ProductoPrioridades;
 import org.ppoole.vapeitreorder.playtest.app.domain.ProductoRespuesta;
 import org.ppoole.vapeitreorder.playtest.app.eciglogistica.EciglogisticaPlaytestService;
 import org.ppoole.vapeitreorder.playtest.app.repository.ProductoDistribuidoraRepository;
@@ -15,7 +16,12 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @SpringBootApplication
 @EntityScan("org.ppoole.vapeitreorder.playtest.app.domain")
@@ -63,9 +69,52 @@ public class PlaytestApp {
                         .toList();
                 List<ProductoRespuesta> ecigResults = eciglogisticaPlaytestService.scrape(eciglogisticaTrios);
 
-
+                List<ProductoPrioridades> productoPrioridades = buildProductoPrioridades(List.of(vaperaliaResults, ecigResults));
+                log.info("Generated {} ProductoPrioridades entries", productoPrioridades.size());
+                for (ProductoPrioridades prioridad : productoPrioridades) {
+                    log.info("SKU {} -> {} URLs ordered by cheapest first", prioridad.getSku(), prioridad.getUrls().size());
+                }
 
             }
         };
+    }
+
+    private List<ProductoPrioridades> buildProductoPrioridades(List<List<ProductoRespuesta>> resultadosPorDistribuidora) {
+        Map<String, List<ProductoRespuesta>> respuestasPorSku = new LinkedHashMap<>();
+
+        for (List<ProductoRespuesta> resultadosDistribuidora : resultadosPorDistribuidora) {
+            for (ProductoRespuesta respuesta : resultadosDistribuidora) {
+                if (respuesta == null || respuesta.getSku() == null) {
+                    continue;
+                }
+                respuestasPorSku
+                        .computeIfAbsent(respuesta.getSku(), ignored -> new ArrayList<>())
+                        .add(respuesta);
+            }
+        }
+
+        List<ProductoPrioridades> prioridades = new ArrayList<>();
+        for (Map.Entry<String, List<ProductoRespuesta>> entry : respuestasPorSku.entrySet()) {
+            List<ProductoRespuesta> respuestasSku = new ArrayList<>(entry.getValue());
+            respuestasSku.sort(Comparator.comparing(ProductoRespuesta::getPrecio, Comparator.nullsLast(Double::compareTo)));
+
+            String nombre = respuestasSku.stream()
+                    .map(ProductoRespuesta::getNombre)
+                    .filter(Objects::nonNull)
+                    .filter(value -> !value.isBlank())
+                    .findFirst()
+                    .orElse("");
+
+            List<String> urlsOrdenadas = respuestasSku.stream()
+                    .map(ProductoRespuesta::getUrl)
+                    .filter(Objects::nonNull)
+                    .filter(value -> !value.isBlank())
+                    .distinct()
+                    .toList();
+
+            prioridades.add(new ProductoPrioridades(entry.getKey(), nombre, urlsOrdenadas));
+        }
+
+        return prioridades;
     }
 }
