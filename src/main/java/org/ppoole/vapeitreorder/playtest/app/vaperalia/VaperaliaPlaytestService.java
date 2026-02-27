@@ -120,14 +120,10 @@ public class VaperaliaPlaytestService {
 
         try {
             String nombre = page.locator("h1[itemprop='name']").textContent().trim();
-            Object precio = page.evaluate("() => window.productPrice ?? null");
-
-            Double precioValue = null;
-            if (precio instanceof Number number) {
-                precioValue = number.doubleValue();
-            } else if (precio instanceof String text && !text.isBlank()) {
-                precioValue = Double.parseDouble(text.replace(",", "."));
-            }
+            var precioLocator = page.locator("#our_price_display");
+            precioLocator.waitFor(new com.microsoft.playwright.Locator.WaitForOptions().setTimeout(5000));
+            String precioText = precioLocator.textContent().trim().replace("€", "").replace(",", ".").trim();
+            Double precioValue = Double.parseDouble(precioText);
 
             log.info("\n────────────────────────────────────────────\n  Producto:  {}\n  Precio:    {} €\n────────────────────────────────────────────", nombre, precioValue);
             return new ProductoRespuesta(skuUrl.getSku(), nombre, precioValue, skuUrl.getUrl(), skuUrl.getDistribuidoraName());
@@ -137,5 +133,3 @@ public class VaperaliaPlaytestService {
         }
     }
 }
-
-// convertirlo a un objeto
