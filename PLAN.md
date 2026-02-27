@@ -11,7 +11,7 @@ API Pedro → SKUs bajo mínimos → DB (sku → URLs por distribuidor)
 
 ---
 
-## Fase 1: Base de datos (EMPEZAMOS AQUÍ)
+## Fase 1: Base de datos — HECHO
 
 ### Infraestructura
 - **PostgreSQL en Docker** con un volumen local para persistencia de datos
@@ -49,13 +49,11 @@ CREATE TABLE product_urls (
 
 ---
 
-## Fase 2: Integración en playtest
+## Fase 2: Integración en playtest — HECHO
 
-- Añadir driver JDBC de PostgreSQL al `pom.xml` de playtest
-- Clase `DatabaseClient` que abre conexión y expone:
-  - `getUrlsForSku(sku)` → `Map<String, String>` (distribuidor → url)
-  - `getUrlsForSkus(List<String>)` → `Map<String, Map<String, String>>`
-- Sin ORM, JDBC plano para mantenerlo simple
+- Spring Data JPA con entidades `Distribuidora`, `Producto`, `ProductoDistribuidora`
+- `ProductoDistribuidoraRepository` con native query que devuelve `SkuUrlDistribuidoraTrio` (sku, url, distribuidoraName)
+- Hibernate ddl-auto: update (crea tablas automáticamente)
 
 ---
 
@@ -111,10 +109,11 @@ src/
 
 | # | Tarea | Estado |
 |---|-------|--------|
-| 1 | `docker-compose.yml` + volumen local | pendiente |
-| 2 | Script SQL de esquema e inicialización | pendiente |
-| 3 | `DatabaseClient.java` en playtest | pendiente |
-| 4 | `EciglogisticaBot.java` con `searchProduct()` | pendiente |
-| 5 | `ApiClient.java` (llamada a Pedro) | pendiente |
-| 6 | `PriceComparator.java` orquestador | pendiente |
-| 7 | Integrar en VapeItReorder prod | pendiente |
+| 1 | `docker-compose.yml` + volumen local | HECHO |
+| 2 | Entidades JPA + repositorios (Spring Data JPA en vez de JDBC plano) | HECHO |
+| 3 | `ItemApiClient.java` (llamada a Pedro) | HECHO |
+| 4 | Flujo completo Pedro → BD → Playwright (Vaperalia) | HECHO |
+| 5 | `EciglogisticaBot.java` con `searchProduct()` | pendiente |
+| 6 | `PriceComparator.java` orquestador multi-distribuidor | pendiente |
+| 7 | Endpoints REST | pendiente |
+| 8 | Scheduler (cron) | pendiente |

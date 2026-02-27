@@ -62,8 +62,8 @@ src/main/java/org/ppoole/vapeitreorder/playtest/app/
 - Sesión Playwright guardada en `vaperalia-session.json` (raíz del proyecto, en .gitignore)
 - **Validación de sesión**: antes de scrapear, navega a `/mi-cuenta` y comprueba que no redirige a `autenticacion`
 - Si no hay fichero de sesión o la sesión ha caducado → error claro y para
-- Selectores: nombre `h1[itemprop='name']`, precio `window.productPrice` (JS global)
-- Variables JS adicionales: `productBasePriceTaxExcl`, `group_reduction` (-0.15 = 15% dto logueado), `quantityAvailable`, `productShowPrice`
+- Selectores: nombre `h1[itemprop='name']`, precio `#our_price_display` (elemento DOM, se parsea quitando `€` y convirtiendo `,` a `.`)
+- **NO usar `window.productPrice`** — es una variable JS con race condition, a veces no está lista cuando Playwright la lee. El elemento DOM `#our_price_display` siempre tiene el precio renderizado
 
 ## Plan Pendiente
 1. ~~Docker + PostgreSQL~~ HECHO
