@@ -38,7 +38,6 @@ mvn spring-boot:run
 
 ## Notas
 
-- `vaperalia-session.json` contiene cookies reales — está en `.gitignore`
 - Si el scraping redirige a la página de login, ejecuta el paso 2 de nuevo
 - VapeIt (proyecto hermano) debe estar corriendo en `localhost:8080`
 - El precio se extrae del elemento DOM `#our_price_display`, no de variables JS (que tienen race conditions)
