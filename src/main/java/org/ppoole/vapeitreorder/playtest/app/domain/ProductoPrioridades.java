@@ -17,6 +17,7 @@ public class ProductoPrioridades {
         this.sku = sku;
         this.nombre = nombre;
         this.urls = urls == null ? new ArrayList<>() : new ArrayList<>(urls);
+        System.out.println(this.toString());
     }
 
     public String getSku() {
@@ -45,5 +46,10 @@ public class ProductoPrioridades {
 
     public void addUrl(String url) {
         this.urls.add(url);
+    }
+
+    @Override
+    public String toString() {
+        return "SKU: " + sku + " | " + nombre + " | URLs: " + urls;
     }
 }
