@@ -1,6 +1,7 @@
 package org.ppoole.vapeitreorder.playtest.app;
 
 import org.ppoole.vapeitreorder.playtest.app.domain.ProductoRespuesta;
+import org.ppoole.vapeitreorder.playtest.app.eciglogistica.EciglogisticaPlaytestService;
 import org.ppoole.vapeitreorder.playtest.app.repository.ProductoDistribuidoraRepository;
 import org.ppoole.vapeitreorder.playtest.app.service.ItemApiClient;
 import org.ppoole.vapeitreorder.playtest.app.vaperalia.VaperaliaPlaytestService;
@@ -28,14 +29,19 @@ public class PlaytestApp {
     }
 
     @Bean
-    ApplicationRunner vaperaliaRunner(VaperaliaPlaytestService vaperaliaPlaytestService,
-                                      ItemApiClient itemApiClient,
-                                      ProductoDistribuidoraRepository productoDistribuidoraRepository) {
+    ApplicationRunner runner(VaperaliaPlaytestService vaperaliaPlaytestService,
+                             EciglogisticaPlaytestService eciglogisticaPlaytestService,
+                             ItemApiClient itemApiClient,
+                             ProductoDistribuidoraRepository productoDistribuidoraRepository) {
         return new ApplicationRunner() {
             @Override
             public void run(ApplicationArguments args) {
                 if (args.getSourceArgs().length > 0 && "--login".equals(args.getSourceArgs()[0])) {
                     vaperaliaPlaytestService.saveSession();
+                    return;
+                }
+                if (args.getSourceArgs().length > 0 && "--login-ecig".equals(args.getSourceArgs()[0])) {
+                    eciglogisticaPlaytestService.saveSession();
                     return;
                 }
 
@@ -45,21 +51,17 @@ public class PlaytestApp {
                     return;
                 }
                 List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> urls = productoDistribuidoraRepository.findSkuUrlDistribuidoraTriosBySkuIn(skus);
-
-
-
-
-                //Para todos los trio que sean de vaperalia:
                 log.info("Found {} URLs for {} SKUs needing reorder", urls.size(), skus.size());
+
                 List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> vaperaliaTrios = urls.stream()
                         .filter(trio -> "VAPERALIA".equalsIgnoreCase(trio.getDistribuidoraName()))
                         .toList();
+                List<ProductoRespuesta> vaperaliaResults = vaperaliaPlaytestService.scrape(vaperaliaTrios);
 
-                List<ProductoRespuesta> productoRespuestas = vaperaliaPlaytestService.scrape(vaperaliaTrios);
-
-
-                //Para todos los pair(trio) que sean de eciglogistica
-                //List...
+                List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> eciglogisticaTrios = urls.stream()
+                        .filter(trio -> "ECIGLOGISTICA".equalsIgnoreCase(trio.getDistribuidoraName()))
+                        .toList();
+                List<ProductoRespuesta> ecigResults = eciglogisticaPlaytestService.scrape(eciglogisticaTrios);
             }
         };
     }
