@@ -1,0 +1,238 @@
+:root {
+    --bg: #f2ede2;
+    --bg-accent: #d7e7db;
+    --panel: rgba(255, 251, 245, 0.92);
+    --panel-strong: rgba(34, 45, 37, 0.9);
+    --ink: #1f1c18;
+    --muted: #665f55;
+    --line: rgba(31, 28, 24, 0.12);
+    --primary: #214f3c;
+    --secondary: #6b3f23;
+    --accent: #c24d2c;
+    --accent-soft: #f1c8a7;
+    --ok: #2f6b46;
+    --shadow: 0 24px 70px rgba(39, 31, 17, 0.12);
+    --radius: 24px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    color: var(--ink);
+    background:
+        radial-gradient(circle at top right, rgba(194, 77, 44, 0.18), transparent 32%),
+        radial-gradient(circle at left 20%, rgba(33, 79, 60, 0.16), transparent 30%),
+        linear-gradient(135deg, var(--bg), var(--bg-accent));
+}
+
+.page-shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 20px 48px;
+}
+
+.hero {
+    padding: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: calc(var(--radius) + 8px);
+    background: linear-gradient(135deg, rgba(255, 248, 239, 0.92), rgba(246, 255, 248, 0.86));
+    box-shadow: var(--shadow);
+}
+
+.eyebrow,
+.panel-kicker {
+    margin: 0 0 8px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.hero h1,
+.panel-heading h2 {
+    margin: 0;
+    line-height: 1.05;
+}
+
+.hero h1 {
+    max-width: 720px;
+    font-size: clamp(2.2rem, 6vw, 4.8rem);
+    font-weight: 800;
+}
+
+.hero-copy {
+    max-width: 760px;
+    margin: 16px 0 0;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--muted);
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    gap: 22px;
+    margin-top: 22px;
+}
+
+.panel {
+    border-radius: var(--radius);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+}
+
+.actions-panel {
+    padding: 24px;
+}
+
+.results-panel {
+    padding: 24px;
+}
+
+.button-stack {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.action-button {
+    border: 0;
+    border-radius: 18px;
+    padding: 16px 18px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+    transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.14);
+}
+
+.action-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.action-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.action-button.primary {
+    background: linear-gradient(135deg, #295f49, #214f3c);
+}
+
+.action-button.secondary {
+    background: linear-gradient(135deg, #7d4d2c, #6b3f23);
+}
+
+.action-button.accent {
+    background: linear-gradient(135deg, #d9633f, #c24d2c);
+}
+
+.status-card {
+    margin-top: 22px;
+    padding: 18px;
+    border-radius: 20px;
+    background: var(--panel-strong);
+    color: #f8f2ea;
+}
+
+.status-text {
+    margin: 0;
+    line-height: 1.5;
+}
+
+.summary {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(47, 107, 70, 0.1);
+    color: var(--ok);
+    font-weight: 700;
+}
+
+.empty-state {
+    margin-top: 18px;
+    padding: 28px;
+    border: 1px dashed var(--line);
+    border-radius: 18px;
+    color: var(--muted);
+    text-align: center;
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.results-grid {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.result-card {
+    padding: 18px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.result-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.result-head h3 {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.sku-badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.source-list {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.source-item {
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(242, 237, 226, 0.75);
+}
+
+.source-item strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.source-item a {
+    color: var(--primary);
+    word-break: break-all;
+}
+
+@media (max-width: 860px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .hero,
+    .actions-panel,
+    .results-panel {
+        padding: 20px;
+    }
+}

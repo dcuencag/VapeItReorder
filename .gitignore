@@ -5,6 +5,7 @@ target/
 src/main/resources/application-local.yml
 **/vaperalia-session.json
 **/eciglogistica-session.json
+sessions/
 data/
 .claude
 .idea

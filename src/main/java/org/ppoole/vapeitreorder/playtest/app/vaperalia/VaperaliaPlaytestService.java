@@ -8,8 +8,10 @@ import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.WaitUntilState;
 import org.ppoole.vapeitreorder.playtest.app.domain.ProductoRespuesta;
 import org.ppoole.vapeitreorder.playtest.app.repository.ProductoDistribuidoraRepository;
+import org.ppoole.vapeitreorder.playtest.app.service.PlaytestSessionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Files;
@@ -21,10 +23,17 @@ import java.util.List;
 public class VaperaliaPlaytestService {
 
     private static final Logger log = LoggerFactory.getLogger(VaperaliaPlaytestService.class);
-    private static final String SESSION_FILE = "vaperalia-session.json";
+
+    private final Path sessionPath;
+
+    public VaperaliaPlaytestService(@Value("${vapeit.sessions-dir:sessions}") String sessionsDir) {
+        this.sessionPath = Path.of(sessionsDir, "vaperalia-session.json");
+    }
 
     public void saveSession() {
         log.info("Abriendo navegador visible — inicia sesión en Vaperalia y espera...");
+        ensureSessionDirectoryExists();
+
         try (Playwright playwright = Playwright.create();
              Browser browser = playwright.chromium().launch(
                      new BrowserType.LaunchOptions().setHeadless(false))) {
@@ -34,8 +43,8 @@ public class VaperaliaPlaytestService {
                 page.navigate("https://vaperalia.es/autenticacion?back=my-account");
                 log.info("Esperando hasta 5 minutos para que inicies sesión...");
                 page.waitForURL("**/mi-cuenta**", new Page.WaitForURLOptions().setTimeout(300_000));
-                context.storageState(new BrowserContext.StorageStateOptions().setPath(Path.of(SESSION_FILE)));
-                log.info("Sesión guardada en {}", Path.of(SESSION_FILE).toAbsolutePath());
+                context.storageState(new BrowserContext.StorageStateOptions().setPath(sessionPath));
+                log.info("Sesión guardada en {}", sessionPath.toAbsolutePath());
             }
         }
     }
@@ -49,16 +58,15 @@ public class VaperaliaPlaytestService {
         }
 
         List<ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio> failedTrios = new java.util.ArrayList<>();
-        var sessionPath = Path.of(SESSION_FILE);
-
         try (Playwright playwright = Playwright.create();
              Browser browser = playwright.chromium().launch(
                      new BrowserType.LaunchOptions().setHeadless(true))) {
 
             var contextOptions = new Browser.NewContextOptions();
             if (!Files.exists(sessionPath)) {
-                log.error("\n\n!!!! ERROR: No se encontró el fichero de sesión. Ejecuta 'mvn spring-boot:run -Dspring-boot.run.arguments=\"--login\"\n' para guardar la sesión primero !!!!\n");
-                return productoRespuestas;
+                String message = "La sesión de Vaperalia no existe. Carga la sesión desde la interfaz antes de ejecutar el reorder.";
+                log.error(message);
+                throw new PlaytestSessionException(message);
             }
             log.info("Cargando sesión desde {}", sessionPath.toAbsolutePath());
             contextOptions.setStorageStatePath(sessionPath);
@@ -66,8 +74,9 @@ public class VaperaliaPlaytestService {
             try (BrowserContext context = browser.newContext(contextOptions)) {
                 Page page = context.newPage();
                 if (!validateSession(page)) {
-                    log.error("\n\n!!!! ERROR: La sesión de Vaperalia no es válida o ha caducado. Ejecuta 'mvn spring-boot:run -Dspring-boot.run.arguments=\"--login\"\n' para renovarla !!!!\n");
-                    return productoRespuestas;
+                    String message = "La sesión de Vaperalia ha caducado o no es válida. Vuelve a cargarla desde la interfaz.";
+                    log.error(message);
+                    throw new PlaytestSessionException(message);
                 }
                 for (ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio url : urls) {
                     try {
@@ -78,6 +87,8 @@ public class VaperaliaPlaytestService {
                         } else {
                             productoRespuestas.add(productoRespuesta);
                         }
+                    } catch (PlaytestSessionException e) {
+                        throw e;
                     } catch (Exception e) {
                         failedTrios.add(url);
                         log.error("Error procesando SKU {} ({}): {}", url.getSku(), url.getUrl(), e.getMessage());
@@ -94,6 +105,18 @@ public class VaperaliaPlaytestService {
         }
 
         return productoRespuestas;
+    }
+
+    private void ensureSessionDirectoryExists() {
+        Path parent = sessionPath.getParent();
+        if (parent == null) {
+            return;
+        }
+        try {
+            Files.createDirectories(parent);
+        } catch (Exception e) {
+            throw new IllegalStateException("No se pudo crear el directorio de sesiones: " + parent.toAbsolutePath(), e);
+        }
     }
 
     private boolean validateSession(Page page) {
@@ -114,8 +137,9 @@ public class VaperaliaPlaytestService {
         page.waitForLoadState();
 
         if (page.url().contains("autenticacion")) {
-            log.error("Redirigido a login — la sesión no es válida o no se cargó");
-            return null;
+            String message = "Vaperalia redirigió a login durante el scraping. La sesión ha caducado o no se cargó correctamente.";
+            log.error(message);
+            throw new PlaytestSessionException(message);
         }
 
         try {

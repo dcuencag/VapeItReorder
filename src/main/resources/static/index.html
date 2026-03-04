@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VapeIt Reorder Console</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="page-shell">
+    <header class="hero">
+        <p class="eyebrow">VapeIt Reorder</p>
+        <h1>Session control and reorder execution in one place.</h1>
+        <p class="hero-copy">
+            Launch the two login flows when sessions expire, then run the reorder scan and inspect the
+            prioritized distributor URLs returned by the backend.
+        </p>
+    </header>
+
+    <main class="layout">
+        <section class="panel actions-panel">
+            <div class="panel-heading">
+                <p class="panel-kicker">Actions</p>
+                <h2>Playwright controls</h2>
+            </div>
+
+            <div class="button-stack">
+                <button id="vaperalia-session" class="action-button primary" type="button">
+                    Load Vaperalia Session
+                </button>
+                <button id="ecig-session" class="action-button secondary" type="button">
+                    Load Eciglogistica Session
+                </button>
+                <button id="run-reorder" class="action-button accent" type="button">
+                    Run Reorder
+                </button>
+            </div>
+
+            <div class="status-card">
+                <p class="panel-kicker">Status</p>
+                <p id="status-text" class="status-text">Ready.</p>
+            </div>
+        </section>
+
+        <section class="panel results-panel">
+            <div class="panel-heading">
+                <p class="panel-kicker">Results</p>
+                <h2>ProductoPrioridades</h2>
+            </div>
+
+            <div id="summary" class="summary" hidden></div>
+            <div id="empty-state" class="empty-state">
+                No execution yet. Run the reorder flow to see prioritized products here.
+            </div>
+            <div id="results" class="results-grid"></div>
+        </section>
+    </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

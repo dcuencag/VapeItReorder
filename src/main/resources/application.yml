@@ -3,6 +3,7 @@ server:
 
 vapeit:
   api-url: ${VAPEIT_API_URL:http://localhost:8080}
+  sessions-dir: ${VAPEIT_SESSIONS_DIR:sessions}
 
 spring:
   datasource:

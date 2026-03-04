@@ -81,6 +81,7 @@ src/main/java/org/ppoole/vapeitreorder/playtest/app/
 - `ProductoRespuesta` existe como POJO de salida, pero sus accesores de distribuidora están nombrados como `getString()`/`setString()` en vez de `getDistribuidora()`/`setDistribuidora()`.
 - `ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio` es proyección por interfaz (no DTO clase).
 - Se usa `RestTemplate` por bean dedicado (`RestTemplateConfig`).
+- Preferencia de estilo: salvo que haya una ventaja clara y concreta, evitar `streams` y priorizar estructuras tradicionales (`for`, bloques explícitos). En este proyecto, el coste de abstracción suele aportar muy poco a la legibilidad.
 
 ## Running
 ```bash
