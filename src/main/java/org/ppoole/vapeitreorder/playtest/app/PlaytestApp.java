@@ -105,14 +105,18 @@ public class PlaytestApp {
                     .findFirst()
                     .orElse("");
 
-            List<String> urlsOrdenadas = respuestasSku.stream()
-                    .map(ProductoRespuesta::getUrl)
-                    .filter(Objects::nonNull)
-                    .filter(value -> !value.isBlank())
-                    .distinct()
-                    .toList();
+            List<String> urlsOrdenadas = new ArrayList<>();
+            List<String> distribuidorasOrdenadas = new ArrayList<>();
+            for (ProductoRespuesta respuesta : respuestasSku) {
+                String url = respuesta.getUrl();
+                if (url == null || url.isBlank() || urlsOrdenadas.contains(url)) {
+                    continue;
+                }
+                urlsOrdenadas.add(url);
+                distribuidorasOrdenadas.add(respuesta.getDistribuidora());
+            }
 
-            prioridades.add(new ProductoPrioridades(entry.getKey(), nombre, urlsOrdenadas));
+            prioridades.add(new ProductoPrioridades(entry.getKey(), nombre, urlsOrdenadas, distribuidorasOrdenadas));
         }
 
         return prioridades;

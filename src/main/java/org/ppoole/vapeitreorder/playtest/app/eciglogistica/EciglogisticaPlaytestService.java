@@ -16,12 +16,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class EciglogisticaPlaytestService {
 
     private static final Logger log = LoggerFactory.getLogger(EciglogisticaPlaytestService.class);
     private static final String SESSION_FILE = "eciglogistica-session.json";
+    private static final double REQUEST_DELAY_MS = 2500;
+    private static final double REQUEST_DELAY_JITTER_MS = 1000;
 
     public void saveSession() {
         log.info("Abriendo navegador visible — inicia sesión en Eciglogistica y espera...");
@@ -69,8 +72,13 @@ public class EciglogisticaPlaytestService {
                     log.error("\n\n!!!! ERROR: La sesión de Eciglogistica no es válida o ha caducado. Ejecuta 'mvn spring-boot:run -Dspring-boot.run.arguments=\"--login-ecig\"\n' para renovarla !!!!\n");
                     return productoRespuestas;
                 }
+                boolean firstRequest = true;
                 for (ProductoDistribuidoraRepository.SkuUrlDistribuidoraTrio url : urls) {
                     try {
+                        if (!firstRequest) {
+                            waitBeforeNextRequest(page);
+                        }
+                        firstRequest = false;
                         ProductoRespuesta productoRespuesta = scrapeProduct(page, url);
                         if (productoRespuesta == null) {
                             failedTrios.add(url);
@@ -136,6 +144,12 @@ public class EciglogisticaPlaytestService {
             log.error("Error scraping {}: {}", url, e.getMessage());
             return null;
         }
+    }
+
+    private void waitBeforeNextRequest(Page page) {
+        double delayMs = REQUEST_DELAY_MS + ThreadLocalRandom.current().nextDouble(REQUEST_DELAY_JITTER_MS);
+        log.info("Esperando {} ms antes de la siguiente petición a Eciglogistica", Math.round(delayMs));
+        page.waitForTimeout(delayMs);
     }
 
     private void selectVariante(Page page, String variante) {

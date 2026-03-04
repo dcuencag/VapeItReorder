@@ -1,8 +1,5 @@
 package org.ppoole.vapeitreorder.playtest.app.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Id;
-
 public class ProductoRespuesta {
 
     public ProductoRespuesta(String sku, String nombre, Double precio, String url, String distribuidora) {
@@ -51,6 +48,14 @@ public class ProductoRespuesta {
     }
 
     public void setString(String distribuidora) {
+        this.distribuidora = distribuidora;
+    }
+
+    public String getDistribuidora() {
+        return distribuidora;
+    }
+
+    public void setDistribuidora(String distribuidora) {
         this.distribuidora = distribuidora;
     }
 
