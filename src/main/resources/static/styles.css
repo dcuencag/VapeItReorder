@@ -157,6 +157,10 @@ body {
     font-weight: 700;
 }
 
+.order-button {
+    margin-top: 18px;
+}
+
 .empty-state {
     margin-top: 18px;
     padding: 28px;
@@ -192,6 +196,28 @@ body {
     font-size: 1.05rem;
 }
 
+.quantity-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.quantity-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.quantity-input {
+    width: 86px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font: inherit;
+    background: #fff;
+}
+
 .sku-badge {
     padding: 6px 10px;
     border-radius: 999px;
@@ -216,8 +242,18 @@ body {
 }
 
 .source-item strong {
-    display: block;
+    margin: 0;
+}
+
+.source-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 6px;
+}
+
+.source-radio {
+    accent-color: var(--primary);
 }
 
 .source-item a {

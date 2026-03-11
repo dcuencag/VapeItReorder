@@ -7,6 +7,7 @@ public class ProductoPrioridades {
 
     private String sku;
     private String nombre;
+    private int cantidadComprar;
     private List<String> urls;
     private List<String> distribuidoras;
 
@@ -15,9 +16,10 @@ public class ProductoPrioridades {
         this.distribuidoras = new ArrayList<>();
     }
 
-    public ProductoPrioridades(String sku, String nombre, List<String> urls, List<String> distribuidoras) {
+    public ProductoPrioridades(String sku, String nombre, int cantidadComprar, List<String> urls, List<String> distribuidoras) {
         this.sku = sku;
         this.nombre = nombre;
+        this.cantidadComprar = cantidadComprar;
         this.urls = urls == null ? new ArrayList<>() : new ArrayList<>(urls);
         this.distribuidoras = distribuidoras == null ? new ArrayList<>() : new ArrayList<>(distribuidoras);
     }
@@ -36,6 +38,14 @@ public class ProductoPrioridades {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public int getCantidadComprar() {
+        return cantidadComprar;
+    }
+
+    public void setCantidadComprar(int cantidadComprar) {
+        this.cantidadComprar = cantidadComprar;
     }
 
     public List<String> getUrls() {
@@ -64,6 +74,6 @@ public class ProductoPrioridades {
 
     @Override
     public String toString() {
-        return "SKU: " + sku + " | " + nombre + " | URLs: " + urls + " | Distribuidoras: " + distribuidoras;
+        return "SKU: " + sku + " | " + nombre + " | Cantidad: " + cantidadComprar + " | URLs: " + urls + " | Distribuidoras: " + distribuidoras;
     }
 }

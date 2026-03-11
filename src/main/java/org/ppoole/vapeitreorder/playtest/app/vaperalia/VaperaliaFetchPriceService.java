@@ -20,13 +20,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class VaperaliaPlaytestService {
+public class VaperaliaFetchPriceService {
 
-    private static final Logger log = LoggerFactory.getLogger(VaperaliaPlaytestService.class);
+    private static final Logger log = LoggerFactory.getLogger(VaperaliaFetchPriceService.class);
 
     private final Path sessionPath;
 
-    public VaperaliaPlaytestService(@Value("${vapeit.sessions-dir:sessions}") String sessionsDir) {
+    public VaperaliaFetchPriceService(@Value("${vapeit.sessions-dir:sessions}") String sessionsDir) {
         this.sessionPath = Path.of(sessionsDir, "vaperalia-session.json");
     }
 

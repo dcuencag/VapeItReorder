@@ -21,15 +21,15 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
-public class EciglogisticaPlaytestService {
+public class EciglogisticaFetchPriceService {
 
-    private static final Logger log = LoggerFactory.getLogger(EciglogisticaPlaytestService.class);
+    private static final Logger log = LoggerFactory.getLogger(EciglogisticaFetchPriceService.class);
     private static final double REQUEST_DELAY_MS = 2500;
     private static final double REQUEST_DELAY_JITTER_MS = 1000;
 
     private final Path sessionPath;
 
-    public EciglogisticaPlaytestService(@Value("${vapeit.sessions-dir:sessions}") String sessionsDir) {
+    public EciglogisticaFetchPriceService(@Value("${vapeit.sessions-dir:sessions}") String sessionsDir) {
         this.sessionPath = Path.of(sessionsDir, "eciglogistica-session.json");
     }
 
